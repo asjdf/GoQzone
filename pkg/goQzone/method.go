@@ -48,11 +48,9 @@ func getAction() string {
 	return "0-0-" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 }
 
-func qrLogin() error {
-	loginSig, _ := getLoginSig()
-
+func getQrCode() (qrSig string, img image.Image, err error) {
 	s.Request.QueryData = url.Values{}
-	resp, img, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
+	resp, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
 		Query(struct {
 			Appid      string
 			E          string
@@ -76,33 +74,40 @@ func qrLogin() error {
 		}).
 		EndBytes()
 	if errs != nil {
-		errors.New("qrLogin() 获取二维码登录二维码出错")
+		return "", nil, errors.New("qrLogin() 获取二维码登录二维码出错")
 	}
-	//fmt.Println(resp.Header)
-	//fmt.Println(img)
-	//fmt.Println(string(img))
-	imgDecode, _, err := image.Decode(bytes.NewReader(img))
-	if err != nil {
-		return err
-	}
-	fmt.Println(convert2Ascii(imgDecode))
-
+	imgDecode, _, err := image.Decode(bytes.NewReader(body))
 	if resp.Header.Get("set-cookie") == "" {
-		return errors.New("qrLogin() 无set-cookie")
+		return "",imgDecode,errors.New("qrLogin() 无set-cookie")
 	}
 	r, _ := regexp.Compile("qrsig=(.*);Path=/;")
-	qrSig := ""
+	qrSig = ""
 	for _, v := range resp.Header.Values("set-cookie") {
 		if r.MatchString(v) {
 			qrSig = r.FindStringSubmatch(v)[1]
 		}
 	}
 	if qrSig == "" {
-		return errors.New("qrLogin() 没找到qrsig")
+		return "",imgDecode,errors.New("qrLogin() 没找到qrsig")
 	}
-	ptqrtoken := getPtqrtoken(qrSig)
+	return qrSig,imgDecode,nil
+}
+
+func qrLogin() error {
+	loginSig, err := getLoginSig()
+	if err != nil {
+		panic(err)
+	}
+
+	qrSig, qrImg,err := getQrCode()
+	if err != nil {
+		panic(err)
+	}
+	
+	fmt.Println(convert2Ascii(qrImg))
+
 	for {
-		qrLoginStateCheck(ptqrtoken, loginSig)
+		qrLoginStateCheck(getPtqrtoken(qrSig), loginSig)
 		time.Sleep(2 * time.Second)
 	}
 }
