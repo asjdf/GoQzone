@@ -9,12 +9,11 @@ var s *service
 
 type service struct {
 	Request *gorequest.SuperAgent
-
 }
 
 //var request *gorequest.SuperAgent
 
-func Init() {
+func Init() *service {
 	s = new(service)
 	s.Request = gorequest.New()
 	s.Request.DoNotClearSuperAgent = true
@@ -24,5 +23,5 @@ func Init() {
 	if err := s.qrLogin();err != nil{
 		panic(err)
 	}
-
+	return s
 }

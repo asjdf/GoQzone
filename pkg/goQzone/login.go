@@ -249,16 +249,16 @@ func quickLoginPtqrshow() error {
 //		Query()
 //}
 
-func checkCookieValid() bool {
+func (s *service)CheckCookieValid() bool {
 	//https://user.qzone.qq.com/10001
 	//"<title>QQ空间-分享生活，留住感动</title>"
 	s.Request.QueryData = url.Values{}
-	_, body, err := s.Request.Get("https://user.qzone.qq.com/10001").End()
+	resp, _, err := s.Request.
+		Get(fmt.Sprintf("https://h5.qzone.qq.com/proxy/domain/base.qzone.qq.com/cgi-bin/user/cgi_userinfo_get_all?uin=%s&g_tk=%s",s.getUin(),s.getGtk())).End()
 	if err != nil {
 		return false
 	}
-	matchLoginTitle, errs := regexp.MatchString("<title>QQ空间-分享生活，留住感动</title>", body)
-	if !matchLoginTitle && errs == nil {
+	if resp.StatusCode != 403 {
 		return true
 	}
 	return false
