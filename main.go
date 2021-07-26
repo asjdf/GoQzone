@@ -3,12 +3,20 @@ package main
 import (
 	"GoQzone-Demo/pkg/goQzone"
 	"fmt"
-	"math/rand"
-	"strconv"
+	"io/ioutil"
 )
 
 func main() {
-	fmt.Println("hello,world!")
-	fmt.Println(strconv.FormatFloat(rand.Float64(),'f',-1,64))
-	goQzone.Init()
+	client := goQzone.Init()
+	if err := client.QrLogin();err != nil{
+		panic(err)
+	}
+
+	f,err := ioutil.ReadFile("./pic/logo.png")
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.NewPost().Content("github.com/asjdf/GoQzone Test").Pic(f).Send()
+	fmt.Println(err)
 }

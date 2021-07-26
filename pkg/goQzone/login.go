@@ -49,7 +49,7 @@ func getAction() string {
 	return "0-0-" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 }
 
-func (s *service)getQrCode() (qrSig string, img image.Image, err error) {
+func (s *service) getQrCode() (qrSig string, img image.Image, err error) {
 	s.Request.QueryData = url.Values{}
 	resp, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
 		Query(struct {
@@ -75,11 +75,11 @@ func (s *service)getQrCode() (qrSig string, img image.Image, err error) {
 		}).
 		EndBytes()
 	if errs != nil {
-		return "", nil, errors.New("qrLogin() 获取二维码登录二维码出错")
+		return "", nil, errors.New("getQrCode() 获取二维码登录二维码出错")
 	}
 	imgDecode, _, err := image.Decode(bytes.NewReader(body))
 	if resp.Header.Get("set-cookie") == "" {
-		return "", imgDecode, errors.New("qrLogin() 无set-cookie")
+		return "", imgDecode, errors.New("getQrCode() 无set-cookie")
 	}
 	r, _ := regexp.Compile("qrsig=(.*);Path=/;")
 	qrSig = ""
@@ -89,12 +89,12 @@ func (s *service)getQrCode() (qrSig string, img image.Image, err error) {
 		}
 	}
 	if qrSig == "" {
-		return "", imgDecode, errors.New("qrLogin() 没找到qrsig")
+		return "", imgDecode, errors.New("getQrCode() 没找到qrsig")
 	}
 	return qrSig, imgDecode, nil
 }
 
-func (s *service)qrLogin() error {
+func (s *service) QrLogin() error {
 	loginSig, err := s.getLoginSig()
 	if err != nil {
 		panic(err)
@@ -124,13 +124,13 @@ func (s *service)qrLogin() error {
 
 	_, _, errs := s.Request.Get(loginUrl).End()
 	if errs != nil {
-		return errors.New("qrlogin() 刷新cookie时出现网络错误")
+		return errors.New("QrLogin() 刷新cookie时出现网络错误")
 	}
 
 	return nil
 }
 
-func (s *service)qrLoginStateCheck(ptqrtoken string, loginSig string) (output []string, err error) {
+func (s *service) qrLoginStateCheck(ptqrtoken string, loginSig string) (output []string, err error) {
 	s.Request.QueryData = url.Values{}
 	u := "https://ssl.ptlogin2.qq.com/ptqrlogin?u1=https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone&ptqrtoken=" + ptqrtoken + "&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=" + getAction() + "&js_ver=19112817&js_type=1&login_sig=" + loginSig + "&pt_uistyle=40&aid=549000912&daid=5&"
 	_, body, errs := s.Request.Get(u).End()
@@ -142,7 +142,7 @@ func (s *service)qrLoginStateCheck(ptqrtoken string, loginSig string) (output []
 	return strings.Split(body, ","), nil
 }
 
-func (s *service)getLoginSig() (string, error) {
+func (s *service) getLoginSig() (string, error) {
 	//request := gorequest.New()
 	resp, _, errs := s.Request.Get("https://xui.ptlogin2.qq.com/cgi-bin/xlogin?proxy_url=https%3A//qzs.qq.com/qzone/v6/portal/proxy.html&daid=5&&hide_title_bar=1&low_login=0&qlogin_auto_login=1&no_verifyimg=1&link_target=blank&appid=549000912&style=22&target=self&s_url=https%3A%2F%2Fqzs.qzone.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&pt_qr_app=%E6%89%8B%E6%9C%BAQQ%E7%A9%BA%E9%97%B4&pt_qr_link=http%3A//z.qzone.com/download.html&self_regurl=https%3A//qzs.qq.com/qzone/v6/reg/index.html&pt_qr_help_link=http%3A//z.qzone.com/download.html&pt_no_auth=1").
 		End()
@@ -167,6 +167,16 @@ func (s *service)getLoginSig() (string, error) {
 //1. getLoginSig()
 //2. quickLoginCheck()
 //3. quickLoginPtqrshow()
+
+func (s *service) QuickLogin() error{
+	loginSig,_ := s.getLoginSig()
+	_, _ = quickLoginCheck(loginSig)
+	quickLoginPtqrshow()
+	//for {
+	//
+	//}
+	return nil
+}
 func quickLoginCheck(loginSig string) (ptdrvs string, err error) {
 	resp, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/check").
 		Query(struct {
@@ -243,18 +253,36 @@ func quickLoginPtqrshow() error {
 	return nil
 }
 
-//func quickLoginStateCheck(loginSig string, ptdrvs string) bool {
-//	s.Request.QueryData = url.Values{}
-//	s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrlogin").
-//		Query()
-//}
+func quickLoginStateCheck(uin string,loginSig string, ptdrvs string) bool {
+	s.Request.QueryData = url.Values{}
+	s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrlogin").
+		Query(map[string]interface{}{
+		"u1": "https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone&specifyurl=http%3A%2F%2Fuser.qzone.qq.com%2F"+uin,
+		"ptqrtoken": "2075302471",
+		"ptredirect": "0",
+		"h": "1",
+		"t": "1",
+		"g": "1",
+		"from_ui": "1",
+		"ptlang": "2052",
+		"action": "1-1-1627316805329",
+		"js_ver": "21072114",
+		"js_type": "1",
+		"login_sig": "HgIgOy0SzMe9K4xO87ehX*-MfeZK5iEgV9yJyHtRlniJfw91q9vrFZl0BCNMpkh3",
+		"pt_uistyle": "40",
+		"aid": "549000912",
+		"daid": "5",
+		"ptdrvs": "bTGGjNrzJCurCjRcwMeU4mcJE5lzQPX2m1EwcBwy129droVbdDHSzsW-NxVv2ohx",
+		"sid": "3222316841997099117",
+		"has_onekey": "1",
+	})
+	return false
+}
 
-func (s *service)CheckCookieValid() bool {
-	//https://user.qzone.qq.com/10001
-	//"<title>QQ空间-分享生活，留住感动</title>"
+func (s *service) CheckCookieValid() bool {
 	s.Request.QueryData = url.Values{}
 	resp, _, err := s.Request.
-		Get(fmt.Sprintf("https://h5.qzone.qq.com/proxy/domain/base.qzone.qq.com/cgi-bin/user/cgi_userinfo_get_all?uin=%s&g_tk=%s",s.getUin(),s.getGtk())).End()
+		Get(fmt.Sprintf("https://h5.qzone.qq.com/proxy/domain/base.qzone.qq.com/cgi-bin/user/cgi_userinfo_get_all?uin=%s&g_tk=%s", s.getUin(), s.getGtk())).End()
 	if err != nil {
 		return false
 	}
@@ -262,4 +290,9 @@ func (s *service)CheckCookieValid() bool {
 		return true
 	}
 	return false
+}
+
+func (s *service) keepCookieAlive() {
+	//s.Request.Get()
+	return
 }
