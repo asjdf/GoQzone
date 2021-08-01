@@ -108,7 +108,7 @@ type postWithPic struct {
 	Code_version     string `json:"code_version"`
 	Format           string `json:"format"`
 	Qzreferrer       string `json:"qzreferrer"`
-	Pic_bo string `json:"pic_bo"`
+	Pic_bo           string `json:"pic_bo"`
 }
 
 func (p *superPost) Send() error {
@@ -135,29 +135,29 @@ func (p *superPost) Send() error {
 			Qzreferrer:       "https://user.qzone.qq.com/" + p.Service.getUin(),
 		}
 		p.Service.Request.QueryData = url.Values{}
-		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?&g_tk=" + p.Service.getGtk()).
+		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?g_tk=" + p.Service.getGtk()).
 			Type("form").
 			Send(formData).
 			End()
-	}else {
+	} else {
 		var picUploadResp []*picUploadRespJsonT
-		for _,v := range p.Pics{
-			uploadResp,_ := p.Service.uploadPic(v)
-			picUploadResp = append(picUploadResp,uploadResp)
+		for _, v := range p.Pics {
+			uploadResp, _ := p.Service.uploadPic(v)
+			picUploadResp = append(picUploadResp, uploadResp)
 		}
 		//generate richval, bos and pic_template
 		richval := ""
 		bos := ""
 		picCount := 0
-		for _,v := range picUploadResp{
+		for _, v := range picUploadResp {
 			if v != nil {
 				picCount++
-				richval += ","+ v.Data.Albumid+","+v.Data.Lloc+","+v.Data.Sloc+","+ strconv.Itoa(v.Data.Type) +","+strconv.Itoa(v.Data.Height)+","+strconv.Itoa(v.Data.Width)+",,"+strconv.Itoa(v.Data.Height)+","+strconv.Itoa(v.Data.Width) + "\t"
+				richval += "," + v.Data.Albumid + "," + v.Data.Lloc + "," + v.Data.Sloc + "," + strconv.Itoa(v.Data.Type) + "," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + ",," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + "\t"
 				bos += regexp.MustCompile("bo=(.+?)$").FindStringSubmatch(v.Data.Url)[1] + ","
 			}
 		}
-		richval = strings.TrimSuffix(richval,"\t")
-		bos = strings.TrimSuffix(bos,",")
+		richval = strings.TrimSuffix(richval, "\t")
+		bos = strings.TrimSuffix(bos, ",")
 		pic_template := ""
 		if picCount != 1 {
 			pic_template = "tpl-" + strconv.Itoa(picCount) + "-1"
@@ -182,7 +182,7 @@ func (p *superPost) Send() error {
 			Pic_bo:           bos + "\t" + bos,
 		}
 		p.Service.Request.QueryData = url.Values{}
-		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?&g_tk=" + p.Service.getGtk()).
+		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?g_tk=" + p.Service.getGtk()).
 			Type("form").
 			Send(formData).
 			End()
@@ -213,9 +213,9 @@ type picUploadRespJsonT struct {
 	Ret int `json:"ret"` //等于-100的时候上传失败（上传失败的时候好像结构还不同，没测试）
 }
 
-func (s *service) uploadPic(pic []byte) (*picUploadRespJsonT,error) {
+func (s *service) uploadPic(pic []byte) (*picUploadRespJsonT, error) {
 	picb64 := base64.StdEncoding.EncodeToString(pic)
-	_,body,errs := s.Request.Post("https://up.qzone.qq.com/cgi-bin/upload/cgi_upload_image?g_tk=" + s.getGtk() + "&&g_tk=" + s.getGtk()).
+	_, body, errs := s.Request.Post("https://up.qzone.qq.com/cgi-bin/upload/cgi_upload_image?g_tk=" + s.getGtk() + "&&g_tk=" + s.getGtk()).
 		Type("form").
 		Send(map[string]interface{}{
 			"filename":          "filename",
@@ -251,9 +251,44 @@ func (s *service) uploadPic(pic []byte) (*picUploadRespJsonT,error) {
 	if err != nil {
 		return nil, err
 	}
-	return respJson,nil
+	return respJson, nil
 }
 
-//func (s *service)post()  {
-//
-//}
+type emotionListT struct {
+	Code    int    `json:"code"`
+	Subcode int    `json:"subcode"`
+	Message string `json:"message"`
+	Default int    `json:"default"`
+	Data    struct {
+		Main struct {
+			Attach               string        `json:"attach"`
+			Searchtype           string        `json:"searchtype"`
+			HasMoreFeeds         bool          `json:"hasMoreFeeds"`
+			Daylist              string        `json:"daylist"`
+			Uinlist              string        `json:"uinlist"`
+			Error                string        `json:"error"`
+			Hotkey               string        `json:"hotkey"`
+			IcGroupData          []interface{} `json:"icGroupData"`
+			HostLevel            string        `json:"host_level"`
+			FriendLevel          string        `json:"friend_level"`
+			Lastaccesstime       string        `json:"lastaccesstime"`
+			LastAccessRelateTime string        `json:"lastAccessRelateTime"`
+			Begintime            string        `json:"begintime"`
+			Endtime              string        `json:"endtime"`
+			Dayspac              string        `json:"dayspac"`
+			HidedNameList        []interface{} `json:"hidedNameList"`
+			AisortBeginTime      string        `json:"aisortBeginTime"`
+			AisortEndTime        string        `json:"aisortEndTime"`
+			AisortOffset         string        `json:"aisortOffset"`
+			AisortNextTime       string        `json:"aisortNextTime"`
+			OwnerBitmap          string        `json:"owner_bitmap"`
+			Pagenum              string        `json:"pagenum"`
+			Externparam          string        `json:"externparam"`
+		} `json:"main"`
+		Data []interface{} `json:"data"`
+	} `json:"data"`
+}
+
+func (s *service) getEmotionList(uin string) {
+
+}

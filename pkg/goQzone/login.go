@@ -41,17 +41,33 @@ func hash33(t string) int64 {
 	return 2147483647 & e
 }
 
-func getPtqrtoken(qrsig string) string {
-	return strconv.FormatInt(hash33(qrsig), 10)
+func (s *service) getPtqrtoken() string {
+	return strconv.FormatInt(hash33(s.getQrsig()), 10)
+}
+
+func (s *service) getPtLoginSig() string {
+	return s.getCookie("https://ptlogin2.qq.com/", "pt_login_sig")
+}
+
+func (s *service) getQrsig() string {
+	return s.getCookie("https://ptlogin2.qq.com/", "qrsig")
+}
+
+func (s *service) getPtGuidSig() string {
+	return s.getCookie("https://ptlogin2.qq.com/", "pt_guid_sig")
+}
+
+func (s *service) getPtGuidToken() string {
+	return strconv.FormatInt(hash33(s.getPtGuidSig()), 10)
 }
 
 func getAction() string {
 	return "0-0-" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 }
 
-func (s *service) getQrCode() (qrSig string, img image.Image, err error) {
+func (s *service) getQrCode() (img image.Image, err error) {
 	s.Request.QueryData = url.Values{}
-	resp, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
+	_, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
 		Query(struct {
 			Appid      string
 			E          string
@@ -75,32 +91,19 @@ func (s *service) getQrCode() (qrSig string, img image.Image, err error) {
 		}).
 		EndBytes()
 	if errs != nil {
-		return "", nil, errors.New("getQrCode() 获取二维码登录二维码出错")
+		return nil, errors.New("getQrCode() 获取二维码登录二维码出错")
 	}
 	imgDecode, _, err := image.Decode(bytes.NewReader(body))
-	if resp.Header.Get("set-cookie") == "" {
-		return "", imgDecode, errors.New("getQrCode() 无set-cookie")
-	}
-	r, _ := regexp.Compile("qrsig=(.*);Path=/;")
-	qrSig = ""
-	for _, v := range resp.Header.Values("set-cookie") {
-		if r.MatchString(v) {
-			qrSig = r.FindStringSubmatch(v)[1]
-		}
-	}
-	if qrSig == "" {
-		return "", imgDecode, errors.New("getQrCode() 没找到qrsig")
-	}
-	return qrSig, imgDecode, nil
+	return imgDecode, nil
 }
 
 func (s *service) QrLogin() error {
-	loginSig, err := s.getLoginSig()
+	err := s.getXlogin()
 	if err != nil {
 		panic(err)
 	}
 
-	qrSig, qrImg, err := s.getQrCode()
+	qrImg, err := s.getQrCode()
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +112,7 @@ func (s *service) QrLogin() error {
 
 	loginUrl := ""
 	for {
-		output, err := s.qrLoginStateCheck(getPtqrtoken(qrSig), loginSig)
+		output, err := s.qrLoginStateCheck()
 		if err != nil {
 			panic(err)
 		}
@@ -130,7 +133,9 @@ func (s *service) QrLogin() error {
 	return nil
 }
 
-func (s *service) qrLoginStateCheck(ptqrtoken string, loginSig string) (output []string, err error) {
+func (s *service) qrLoginStateCheck() (output []string, err error) {
+	ptqrtoken := s.getPtqrtoken()
+	loginSig := s.getPtLoginSig()
 	s.Request.QueryData = url.Values{}
 	u := "https://ssl.ptlogin2.qq.com/ptqrlogin?u1=https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone&ptqrtoken=" + ptqrtoken + "&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=" + getAction() + "&js_ver=19112817&js_type=1&login_sig=" + loginSig + "&pt_uistyle=40&aid=549000912&daid=5&"
 	_, body, errs := s.Request.Get(u).End()
@@ -142,42 +147,47 @@ func (s *service) qrLoginStateCheck(ptqrtoken string, loginSig string) (output [
 	return strings.Split(body, ","), nil
 }
 
-func (s *service) getLoginSig() (string, error) {
-	//request := gorequest.New()
-	resp, _, errs := s.Request.Get("https://xui.ptlogin2.qq.com/cgi-bin/xlogin?proxy_url=https%3A//qzs.qq.com/qzone/v6/portal/proxy.html&daid=5&&hide_title_bar=1&low_login=0&qlogin_auto_login=1&no_verifyimg=1&link_target=blank&appid=549000912&style=22&target=self&s_url=https%3A%2F%2Fqzs.qzone.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&pt_qr_app=%E6%89%8B%E6%9C%BAQQ%E7%A9%BA%E9%97%B4&pt_qr_link=http%3A//z.qzone.com/download.html&self_regurl=https%3A//qzs.qq.com/qzone/v6/reg/index.html&pt_qr_help_link=http%3A//z.qzone.com/download.html&pt_no_auth=1").
+func (s *service) getXlogin() error {
+	_, _, errs := s.Request.Get("https://xui.ptlogin2.qq.com/cgi-bin/xlogin?proxy_url=https%3A//qzs.qq.com/qzone/v6/portal/proxy.html&daid=5&&hide_title_bar=1&low_login=0&qlogin_auto_login=1&no_verifyimg=1&link_target=blank&appid=549000912&style=22&target=self&s_url=https%3A%2F%2Fqzs.qzone.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&pt_qr_app=%E6%89%8B%E6%9C%BAQQ%E7%A9%BA%E9%97%B4&pt_qr_link=http%3A//z.qzone.com/download.html&self_regurl=https%3A//qzs.qq.com/qzone/v6/reg/index.html&pt_qr_help_link=http%3A//z.qzone.com/download.html&pt_no_auth=1").
 		End()
 	if errs != nil {
-		return "", errors.New("getLoginSig() 网络请求错误")
+		return errors.New("getXlogin() 网络请求错误")
 	}
-	//fmt.Println(resp.Header.Values("set-cookie"))
-	if resp.Header.Get("set-cookie") == "" {
-		return "", errors.New("getLoginSig() 无set-cookie")
-	}
-	r, _ := regexp.Compile("pt_login_sig=(.*); PATH=/;")
-	for _, v := range resp.Header.Values("set-cookie") {
-		if r.MatchString(v) {
-			return r.FindStringSubmatch(v)[1], nil
-		}
-	}
-
-	return "", errors.New("getLoginSig() 没找到pt_login_sig")
+	return nil
 }
 
 //快速登录流程：
-//1. getLoginSig()
-//2. quickLoginCheck()
-//3. quickLoginPtqrshow()
+//1. fetchOnekeyListByGUID()
+//2. getXlogin()
+//3. quickLoginCheck()
+//4. quickLoginPtqrshow()
 
-func (s *service) QuickLogin() error{
-	loginSig,_ := s.getLoginSig()
-	_, _ = quickLoginCheck(loginSig)
-	quickLoginPtqrshow()
+func (s *service) QuickLogin() error {
+	_ = s.fetchOnekeyListByGUID()
+	_ = s.getXlogin()
+	_, _ = s.quickLoginCheck()
+	//s.quickLoginPtqrshow()
 	//for {
 	//
 	//}
 	return nil
 }
-func quickLoginCheck(loginSig string) (ptdrvs string, err error) {
+
+func (s *service) fetchOnekeyListByGUID() error {
+	s.Request.QueryData = url.Values{}
+	_, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/pt_fetch_dev_uin").
+		Query(map[string]interface{}{
+			"r":             strconv.FormatFloat(rand.Float64(), 'f', -1, 64),
+			"pt_guid_token": s.getPtGuidToken(),
+		}).End()
+	if errs != nil {
+		return errors.New("fetchOnekeyListByGUID() 网络请求错误")
+	}
+	return nil
+}
+
+func (s *service) quickLoginCheck() (ptdrvs string, err error) {
+	s.Request.QueryData = url.Values{}
 	resp, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/check").
 		Query(struct {
 			Regmaster  string
@@ -199,7 +209,7 @@ func quickLoginCheck(loginSig string) (ptdrvs string, err error) {
 			Appid:      "549000912",
 			Js_ver:     "21072114",
 			Js_type:    "1",
-			Login_sig:  loginSig,
+			Login_sig:  s.getPtLoginSig(),
 			U1:         "https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone",
 			R:          strconv.FormatFloat(rand.Float64(), 'f', -1, 64),
 			Pt_uistyle: "40",
@@ -221,27 +231,19 @@ func quickLoginCheck(loginSig string) (ptdrvs string, err error) {
 	return "", errors.New("quickLoginCheck() 没找到ptdrvs")
 }
 
-func quickLoginPtqrshow() error {
+func (s *service) quickLoginPtqrshow() error {
 	s.Request.QueryData = url.Values{}
 	_, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
-		Query(struct {
-			Qr_push_uin string
-			Type        string
-			Qr_push     string
-			Appid       string
-			T           string
-			Ptlang      string
-			Daid        string
-			Pt_3rd_aid  string
-		}{
-			Qr_push_uin: "243852814",
-			Type:        "1",
-			Qr_push:     "1",
-			Appid:       "549000912",
-			T:           strconv.FormatFloat(rand.Float64(), 'f', -1, 64),
-			Ptlang:      "2052",
-			Daid:        "5",
-			Pt_3rd_aid:  "0"}).
+		Query(map[string]interface{}{
+			"qr_push_uin": "243852814",
+			"type":        "1",
+			"qr_push":     "1",
+			"appid":       "549000912",
+			"t":           strconv.FormatFloat(rand.Float64(), 'f', -1, 64) + "2",
+			"ptlang":      "2052",
+			"daid":        "5",
+			"pt_3rd_aid":  "0",
+		}).
 		End()
 	if errs != nil {
 		return errors.New("quickLoginPtqrshow() 网络通信错误")
@@ -253,29 +255,29 @@ func quickLoginPtqrshow() error {
 	return nil
 }
 
-func quickLoginStateCheck(uin string,loginSig string, ptdrvs string) bool {
+func (s *service) quickLoginStateCheck(uin string, loginSig string, ptdrvs string) bool {
 	s.Request.QueryData = url.Values{}
 	s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrlogin").
 		Query(map[string]interface{}{
-		"u1": "https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone&specifyurl=http%3A%2F%2Fuser.qzone.qq.com%2F"+uin,
-		"ptqrtoken": "2075302471",
-		"ptredirect": "0",
-		"h": "1",
-		"t": "1",
-		"g": "1",
-		"from_ui": "1",
-		"ptlang": "2052",
-		"action": "1-1-1627316805329",
-		"js_ver": "21072114",
-		"js_type": "1",
-		"login_sig": "HgIgOy0SzMe9K4xO87ehX*-MfeZK5iEgV9yJyHtRlniJfw91q9vrFZl0BCNMpkh3",
-		"pt_uistyle": "40",
-		"aid": "549000912",
-		"daid": "5",
-		"ptdrvs": "bTGGjNrzJCurCjRcwMeU4mcJE5lzQPX2m1EwcBwy129droVbdDHSzsW-NxVv2ohx",
-		"sid": "3222316841997099117",
-		"has_onekey": "1",
-	})
+			"u1":         "https://qzs.qzone.qq.com/qzone/v5/loginsucc.html?para=izone&specifyurl=http%3A%2F%2Fuser.qzone.qq.com%2F" + uin,
+			"ptqrtoken":  "2075302471",
+			"ptredirect": "0",
+			"h":          "1",
+			"t":          "1",
+			"g":          "1",
+			"from_ui":    "1",
+			"ptlang":     "2052",
+			"action":     "1-1-1627316805329",
+			"js_ver":     "21072114",
+			"js_type":    "1",
+			"login_sig":  "HgIgOy0SzMe9K4xO87ehX*-MfeZK5iEgV9yJyHtRlniJfw91q9vrFZl0BCNMpkh3",
+			"pt_uistyle": "40",
+			"aid":        "549000912",
+			"daid":       "5",
+			"ptdrvs":     "bTGGjNrzJCurCjRcwMeU4mcJE5lzQPX2m1EwcBwy129droVbdDHSzsW-NxVv2ohx",
+			"sid":        "3222316841997099117",
+			"has_onekey": "1",
+		})
 	return false
 }
 
@@ -293,6 +295,8 @@ func (s *service) CheckCookieValid() bool {
 }
 
 func (s *service) keepCookieAlive() {
-	//s.Request.Get()
-	return
+	for {
+		s.Request.Get("https://user.qzone.qq.com/" + s.getUin()).End()
+		time.Sleep(time.Duration(rand.Intn(30)+15) * time.Second)
+	}
 }

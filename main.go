@@ -8,11 +8,11 @@ import (
 
 func main() {
 	client := goQzone.Init()
-	if err := client.QrLogin();err != nil{
+	if err := client.QrLogin(); err != nil {
 		panic(err)
 	}
 
-	f,err := ioutil.ReadFile("./pic/logo.png")
+	f, err := ioutil.ReadFile("./pic/logo.png")
 	if err != nil {
 		panic(err)
 	}
