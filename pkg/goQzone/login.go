@@ -41,23 +41,23 @@ func hash33(t string) int64 {
 	return 2147483647 & e
 }
 
-func (s *service) getPtqrtoken() string {
+func (s *Service) getPtqrtoken() string {
 	return strconv.FormatInt(hash33(s.getQrsig()), 10)
 }
 
-func (s *service) getPtLoginSig() string {
+func (s *Service) getPtLoginSig() string {
 	return s.getCookie("https://ptlogin2.qq.com/", "pt_login_sig")
 }
 
-func (s *service) getQrsig() string {
+func (s *Service) getQrsig() string {
 	return s.getCookie("https://ptlogin2.qq.com/", "qrsig")
 }
 
-func (s *service) getPtGuidSig() string {
+func (s *Service) getPtGuidSig() string {
 	return s.getCookie("https://ptlogin2.qq.com/", "pt_guid_sig")
 }
 
-func (s *service) getPtGuidToken() string {
+func (s *Service) getPtGuidToken() string {
 	return strconv.FormatInt(hash33(s.getPtGuidSig()), 10)
 }
 
@@ -65,7 +65,7 @@ func getAction() string {
 	return "0-0-" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 }
 
-func (s *service) getQrCode() (img image.Image, err error) {
+func (s *Service) getQrCode() (img image.Image, err error) {
 	s.Request.QueryData = url.Values{}
 	_, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
 		Query(struct {
@@ -97,7 +97,7 @@ func (s *service) getQrCode() (img image.Image, err error) {
 	return imgDecode, nil
 }
 
-func (s *service) QrLogin() error {
+func (s *Service) QrLogin() error {
 	err := s.getXlogin()
 	if err != nil {
 		panic(err)
@@ -133,7 +133,7 @@ func (s *service) QrLogin() error {
 	return nil
 }
 
-func (s *service) qrLoginStateCheck() (output []string, err error) {
+func (s *Service) qrLoginStateCheck() (output []string, err error) {
 	ptqrtoken := s.getPtqrtoken()
 	loginSig := s.getPtLoginSig()
 	s.Request.QueryData = url.Values{}
@@ -147,7 +147,7 @@ func (s *service) qrLoginStateCheck() (output []string, err error) {
 	return strings.Split(body, ","), nil
 }
 
-func (s *service) getXlogin() error {
+func (s *Service) getXlogin() error {
 	_, _, errs := s.Request.Get("https://xui.ptlogin2.qq.com/cgi-bin/xlogin?proxy_url=https%3A//qzs.qq.com/qzone/v6/portal/proxy.html&daid=5&&hide_title_bar=1&low_login=0&qlogin_auto_login=1&no_verifyimg=1&link_target=blank&appid=549000912&style=22&target=self&s_url=https%3A%2F%2Fqzs.qzone.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&pt_qr_app=%E6%89%8B%E6%9C%BAQQ%E7%A9%BA%E9%97%B4&pt_qr_link=http%3A//z.qzone.com/download.html&self_regurl=https%3A//qzs.qq.com/qzone/v6/reg/index.html&pt_qr_help_link=http%3A//z.qzone.com/download.html&pt_no_auth=1").
 		End()
 	if errs != nil {
@@ -162,7 +162,7 @@ func (s *service) getXlogin() error {
 //3. quickLoginCheck()
 //4. quickLoginPtqrshow()
 
-func (s *service) QuickLogin() error {
+func (s *Service) QuickLogin() error {
 	_ = s.fetchOnekeyListByGUID()
 	_ = s.getXlogin()
 	_, _ = s.quickLoginCheck()
@@ -173,7 +173,7 @@ func (s *service) QuickLogin() error {
 	return nil
 }
 
-func (s *service) fetchOnekeyListByGUID() error {
+func (s *Service) fetchOnekeyListByGUID() error {
 	s.Request.QueryData = url.Values{}
 	_, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/pt_fetch_dev_uin").
 		Query(map[string]interface{}{
@@ -186,7 +186,7 @@ func (s *service) fetchOnekeyListByGUID() error {
 	return nil
 }
 
-func (s *service) quickLoginCheck() (ptdrvs string, err error) {
+func (s *Service) quickLoginCheck() (ptdrvs string, err error) {
 	s.Request.QueryData = url.Values{}
 	resp, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/check").
 		Query(struct {
@@ -231,7 +231,7 @@ func (s *service) quickLoginCheck() (ptdrvs string, err error) {
 	return "", errors.New("quickLoginCheck() 没找到ptdrvs")
 }
 
-func (s *service) quickLoginPtqrshow() error {
+func (s *Service) quickLoginPtqrshow() error {
 	s.Request.QueryData = url.Values{}
 	_, _, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
 		Query(map[string]interface{}{
@@ -255,7 +255,7 @@ func (s *service) quickLoginPtqrshow() error {
 	return nil
 }
 
-func (s *service) quickLoginStateCheck(uin string, loginSig string, ptdrvs string) bool {
+func (s *Service) quickLoginStateCheck(uin string, loginSig string, ptdrvs string) bool {
 	s.Request.QueryData = url.Values{}
 	s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrlogin").
 		Query(map[string]interface{}{
@@ -281,7 +281,7 @@ func (s *service) quickLoginStateCheck(uin string, loginSig string, ptdrvs strin
 	return false
 }
 
-func (s *service) CheckCookieValid() bool {
+func (s *Service) CheckCookieValid() bool {
 	s.Request.QueryData = url.Values{}
 	resp, _, err := s.Request.
 		Get(fmt.Sprintf("https://h5.qzone.qq.com/proxy/domain/base.qzone.qq.com/cgi-bin/user/cgi_userinfo_get_all?uin=%s&g_tk=%s", s.getUin(), s.getGtk())).End()
@@ -294,7 +294,7 @@ func (s *service) CheckCookieValid() bool {
 	return false
 }
 
-func (s *service) keepCookieAlive() {
+func (s *Service) keepCookieAlive() {
 	for {
 		s.Request.Get("https://user.qzone.qq.com/" + s.getUin()).End()
 		time.Sleep(time.Duration(rand.Intn(30)+15) * time.Second)

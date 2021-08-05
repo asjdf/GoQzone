@@ -14,10 +14,10 @@ type superPost struct {
 	ContentStr string
 	Pics       [][]byte
 	RightStr   string
-	Service    *service
+	Service    *Service
 }
 
-func (s *service) getGtk() string {
+func (s *Service) getGtk() string {
 	h := int64(5381)
 	skey := s.getCookie("https://user.qzone.qq.com/", "p_skey")
 	for _, v := range skey {
@@ -26,21 +26,21 @@ func (s *service) getGtk() string {
 	return strconv.FormatInt(h&0x7fffffff, 10)
 }
 
-func (s *service) getUin() string {
+func (s *Service) getUin() string {
 	uin := s.getCookie("https://user.qzone.qq.com/", "p_uin")
 	uin = regexp.MustCompile("([1-9].[0-9]*)$").FindString(uin)
 	return uin
 }
 
-func (s *service) getSkey() string {
+func (s *Service) getSkey() string {
 	return s.getCookie("https://user.qzone.qq.com/", "skey")
 }
 
-func (s *service) getPSkey() string {
+func (s *Service) getPSkey() string {
 	return s.getCookie("https://user.qzone.qq.com/", "p_skey")
 }
 
-func (s *service) getCookie(urlString string, cookieKey string) (cookieValue string) {
+func (s *Service) getCookie(urlString string, cookieKey string) (cookieValue string) {
 	urlDecode, _ := url.Parse(urlString)
 	for _, v := range s.Request.Client.Jar.Cookies(urlDecode) {
 		if v.Name == cookieKey {
@@ -51,7 +51,7 @@ func (s *service) getCookie(urlString string, cookieKey string) (cookieValue str
 	return ""
 }
 
-func (s *service) NewPost() *superPost {
+func (s *Service) NewPost() *superPost {
 	post := new(superPost)
 	post.RightStr = "1"
 	post.Service = s
@@ -213,7 +213,7 @@ type picUploadRespJsonT struct {
 	Ret int `json:"ret"` //等于-100的时候上传失败（上传失败的时候好像结构还不同，没测试）
 }
 
-func (s *service) uploadPic(pic []byte) (*picUploadRespJsonT, error) {
+func (s *Service) uploadPic(pic []byte) (*picUploadRespJsonT, error) {
 	picb64 := base64.StdEncoding.EncodeToString(pic)
 	_, body, errs := s.Request.Post("https://up.qzone.qq.com/cgi-bin/upload/cgi_upload_image?g_tk=" + s.getGtk() + "&&g_tk=" + s.getGtk()).
 		Type("form").
@@ -289,6 +289,6 @@ type emotionListT struct {
 	} `json:"data"`
 }
 
-func (s *service) getEmotionList(uin string) {
+func (s *Service) getEmotionList(uin string) {
 
 }

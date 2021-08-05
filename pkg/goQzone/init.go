@@ -5,14 +5,14 @@ import (
 	_ "image/png"
 )
 
-var s *service
+var s *Service
 
-type service struct {
+type Service struct {
 	Request *gorequest.SuperAgent
 }
 
-func Init() *service {
-	s = new(service)
+func Init() *Service {
+	s = new(Service)
 	s.Request = gorequest.New()
 	s.Request.DoNotClearSuperAgent = true
 	s.Request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36")
