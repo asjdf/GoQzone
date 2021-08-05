@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GoQzone-Demo/pkg/goQzone"
+	"GoQzone/pkg/goQzone"
 	"fmt"
 	"io/ioutil"
 )

@@ -11,7 +11,7 @@
 引用
 
 ```go
-import "GoQzone-Demo/pkg/goQzone"
+import "GoQzone/pkg/goQzone"
 ```
 
 
