@@ -73,32 +73,25 @@ func getAction() string {
 func (s *Service) getQrCode() (img image.Image, err error) {
 	s.Request.QueryData = url.Values{}
 	_, body, errs := s.Request.Get("https://ssl.ptlogin2.qq.com/ptqrshow").
-		Query(struct {
-			Appid      string
-			E          string
-			L          string
-			S          string
-			D          string
-			V          string
-			T          string
-			Daid       string
-			Pt_3rd_aid string
-		}{
-			Appid:      "549000912",
-			E:          "2",
-			L:          "M",
-			S:          "3",
-			D:          "72",
-			V:          "4",
-			Daid:       "5",
-			Pt_3rd_aid: "0",
-			T:          strconv.FormatFloat(rand.Float64(), 'f', -1, 64),
+		Query(map[string]string{
+			"appid":      "549000912",
+			"e":          "2",
+			"l":          "M",
+			"s":          "3",
+			"d":          "72",
+			"v":          "4",
+			"daid":       "5",
+			"pt_3rd_aid": "0",
+			"t":          strconv.FormatFloat(rand.Float64(), 'f', -1, 64),
 		}).
 		EndBytes()
 	if errs != nil {
 		return nil, errors.New("getQrCode() 获取二维码登录二维码出错")
 	}
 	imgDecode, _, err := image.Decode(bytes.NewReader(body))
+	if err != nil {
+
+	}
 	return imgDecode, nil
 }
 
