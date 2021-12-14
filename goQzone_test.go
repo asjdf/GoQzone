@@ -18,6 +18,6 @@ func TestSendEmotion(t *testing.T) {
 		panic(err)
 	}
 
-	err = client.NewPost().Content("github.com/asjdf/GoQzone Test").Pic(f).Send()
+	err = client.NewPost().Content("github.com/asjdf/GoQzone Test").Pic(f).Right(VisibleSelf).Send()
 	fmt.Println(err)
 }

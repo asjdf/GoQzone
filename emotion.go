@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// 说说可见权限
 const (
 	VisibleAll        = 1   // 所有人可见
 	VisibleFriend     = 4   // 好友可见
@@ -18,11 +19,30 @@ const (
 	VisibleBanPart    = 128 // 仅部分好友不可见
 )
 
-type superPost struct {
-	ContentStr string
-	Pics       [][]byte
-	RightStr   string
-	Service    *Service
+type superEmotion struct {
+	Emotion Emotion
+	Pics    [][]byte
+	Service *Service
+}
+
+type Emotion struct {
+	SynTweetVersion string `json:"syn_tweet_verson"`
+	ParamStr        string `json:"paramstr"`
+	PicTemplate     string `json:"pic_template"`
+	RichType        string `json:"richtype"`
+	RichVal         string `json:"richval"`
+	SpecialUrl      string `json:"special_url"`
+	SubRichType     string `json:"subrichtype"`
+	Con             string `json:"con"` // 文字内容
+	FeedVersion     string `json:"feedversion"`
+	Ver             string `json:"ver"`
+	UgcRight        int    `json:"ugc_right"` // 可见权限
+	ToSign          string `json:"to_sign"`
+	HostUin         string `json:"hostuin"`
+	CodeVersion     string `json:"code_version"`
+	Format          string `json:"format"`
+	QzReferrer      string `json:"qzreferrer"`
+	PicBo           string `json:"pic_bo,omitempty"`
 }
 
 func (s *Service) getGtk() string {
@@ -60,96 +80,51 @@ func (s *Service) getCookie(urlString string, cookieKey string) (cookieValue str
 }
 
 // NewPost 新建说说
-func (s *Service) NewPost() *superPost {
-	post := new(superPost)
-	post.RightStr = "1"
+func (s *Service) NewPost() *superEmotion {
+	post := new(superEmotion)
+	// 初始化常量
+	post.Emotion.SynTweetVersion = "1"
+	post.Emotion.ParamStr = "1"
+	post.Emotion.FeedVersion = "1"
+	post.Emotion.Ver = "1"
+	post.Emotion.ToSign = "0"
+	post.Emotion.HostUin = s.getUin()
+	post.Emotion.CodeVersion = "1"
+	post.Emotion.Format = "fs"
+	post.Emotion.QzReferrer = "https://user.qzone.qq.com/" + s.getUin()
+
+	post.Emotion.UgcRight = 1
 	post.Service = s
 	return post
 }
 
 // Content 添加文字内容
-func (p *superPost) Content(content string) *superPost {
-	p.ContentStr += content
+func (p *superEmotion) Content(content string) *superEmotion {
+	p.Emotion.Con += content
 	return p
 }
 
 // Pic 添加图片
-func (p *superPost) Pic(img []byte) *superPost {
+func (p *superEmotion) Pic(img []byte) *superEmotion {
 	p.Pics = append(p.Pics, img)
 	return p
 }
 
 // Right 设置说说权限
-func (p *superPost) Right(right string) *superPost {
-	p.RightStr = right
+func (p *superEmotion) Right(right int) *superEmotion {
+	p.Emotion.UgcRight = right
 	return p
 }
 
-type postWithoutPic struct {
-	Syn_tweet_verson string `json:"syn_tweet_verson"`
-	Paramstr         string `json:"paramstr"`
-	Pic_template     string `json:"pic_template"`
-	Richtype         string `json:"richtype"`
-	Richval          string `json:"richval"`
-	Special_url      string `json:"special_url"`
-	Subrichtype      string `json:"subrichtype"`
-	Con              string `json:"con"`
-	Feedversion      string `json:"feedversion"`
-	Ver              string `json:"ver"`
-	Ugc_right        string `json:"ugc_right"` // 1:所有人 64:仅自己
-	To_sign          string `json:"to_sign"`
-	Hostuin          string `json:"hostuin"`
-	Code_version     string `json:"code_version"`
-	Format           string `json:"format"`
-	Qzreferrer       string `json:"qzreferrer"`
-}
-type postWithPic struct {
-	Syn_tweet_verson string `json:"syn_tweet_verson"`
-	Paramstr         string `json:"paramstr"`
-	Pic_template     string `json:"pic_template"`
-	Richtype         string `json:"richtype"`
-	Richval          string `json:"richval"`
-	Special_url      string `json:"special_url"`
-	Subrichtype      string `json:"subrichtype"`
-	Con              string `json:"con"`
-	Feedversion      string `json:"feedversion"`
-	Ver              string `json:"ver"`
-	Ugc_right        string `json:"ugc_right"` // 1:所有人 64:仅自己
-	To_sign          string `json:"to_sign"`
-	Hostuin          string `json:"hostuin"`
-	Code_version     string `json:"code_version"`
-	Format           string `json:"format"`
-	Qzreferrer       string `json:"qzreferrer"`
-	Pic_bo           string `json:"pic_bo"`
-}
-
-func (p *superPost) Send() error {
+func (p *superEmotion) Send() error {
 	if p.Service.CheckCookieValid() != true {
 		return errors.New("登录状态过期")
 	}
 	if len(p.Pics) == 0 {
-		formData := postWithoutPic{
-			Syn_tweet_verson: "1",
-			Paramstr:         "1",
-			Pic_template:     "",
-			Richtype:         "",
-			Richval:          "",
-			Special_url:      "",
-			Subrichtype:      "",
-			Con:              p.ContentStr,
-			Feedversion:      "1",
-			Ver:              "1",
-			Ugc_right:        p.RightStr,
-			To_sign:          "0",
-			Hostuin:          p.Service.getUin(),
-			Code_version:     "1",
-			Format:           "fs",
-			Qzreferrer:       "https://user.qzone.qq.com/" + p.Service.getUin(),
-		}
 		p.Service.Request.QueryData = url.Values{}
 		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?g_tk=" + p.Service.getGtk()).
 			Type("form").
-			Send(formData).
+			Send(p.Emotion).
 			End()
 	} else {
 		var picUploadResp []*picUploadRespJsonT
@@ -157,46 +132,30 @@ func (p *superPost) Send() error {
 			uploadResp, _ := p.Service.uploadPic(v)
 			picUploadResp = append(picUploadResp, uploadResp)
 		}
-		//generate richval, bos and pic_template
-		richval := ""
+		//generate richVal, bos and pic_template
+		richVal := ""
 		bos := ""
 		picCount := 0
 		for _, v := range picUploadResp {
 			if v != nil {
 				picCount++
-				richval += "," + v.Data.Albumid + "," + v.Data.Lloc + "," + v.Data.Sloc + "," + strconv.Itoa(v.Data.Type) + "," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + ",," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + "\t"
+				richVal += "," + v.Data.Albumid + "," + v.Data.Lloc + "," + v.Data.Sloc + "," + strconv.Itoa(v.Data.Type) + "," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + ",," + strconv.Itoa(v.Data.Height) + "," + strconv.Itoa(v.Data.Width) + "\t"
 				bos += regexp.MustCompile("bo=(.+?)$").FindStringSubmatch(v.Data.Url)[1] + ","
 			}
 		}
-		richval = strings.TrimSuffix(richval, "\t")
 		bos = strings.TrimSuffix(bos, ",")
-		pic_template := ""
+		p.Emotion.RichVal = strings.TrimSuffix(richVal, "\t")
+		p.Emotion.PicBo = bos + "\t" + bos
+		p.Emotion.RichType = "1"
+		p.Emotion.SubRichType = "1"
 		if picCount != 1 {
-			pic_template = "tpl-" + strconv.Itoa(picCount) + "-1"
+			p.Emotion.PicTemplate = "tpl-" + strconv.Itoa(picCount) + "-1"
 		}
-		formData := postWithPic{
-			Syn_tweet_verson: "1",
-			Paramstr:         "1",
-			Pic_template:     pic_template,
-			Richtype:         "1",
-			Richval:          richval,
-			Special_url:      "",
-			Subrichtype:      "1",
-			Con:              p.ContentStr,
-			Feedversion:      "1",
-			Ver:              "1",
-			Ugc_right:        p.RightStr,
-			To_sign:          "0",
-			Hostuin:          p.Service.getUin(),
-			Code_version:     "1",
-			Format:           "fs",
-			Qzreferrer:       "https://user.qzone.qq.com/" + p.Service.getUin(),
-			Pic_bo:           bos + "\t" + bos,
-		}
+
 		p.Service.Request.QueryData = url.Values{}
 		p.Service.Request.Post("https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com/cgi-bin/emotion_cgi_publish_v6?g_tk=" + p.Service.getGtk()).
 			Type("form").
-			Send(formData).
+			Send(p.Emotion).
 			End()
 
 	}
