@@ -38,7 +38,8 @@ type Emotion struct {
 	Con             string       `json:"con"` // 文字内容
 	FeedVersion     string       `json:"feedversion"`
 	Ver             string       `json:"ver"`
-	UgcRight        VisibleRight `json:"ugc_right"` // 可见权限
+	UgcRight        VisibleRight `json:"ugc_right"`            // 可见权限
+	AllowUins       string       `json:"allow_uins,omitempty"` // 部分好友可见或不可见需要用到这个 提交时需再添加一个参数allow_uins 值为指定的好友，用英文的“|”分开
 	ToSign          string       `json:"to_sign"`
 	HostUin         string       `json:"hostuin"`
 	CodeVersion     string       `json:"code_version"`
