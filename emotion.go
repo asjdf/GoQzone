@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+const (
+	VisibleAll        = 1   // 所有人可见
+	VisibleFriend     = 4   // 好友可见
+	VisiblePartFriend = 16  // 部分好友可见
+	VisibleSelf       = 64  // 仅自己可见
+	VisibleBanPart    = 128 // 仅部分好友不可见
+)
+
 type superPost struct {
 	ContentStr string
 	Pics       [][]byte
@@ -51,6 +59,7 @@ func (s *Service) getCookie(urlString string, cookieKey string) (cookieValue str
 	return ""
 }
 
+// NewPost 新建说说
 func (s *Service) NewPost() *superPost {
 	post := new(superPost)
 	post.RightStr = "1"
@@ -58,16 +67,19 @@ func (s *Service) NewPost() *superPost {
 	return post
 }
 
+// Content 添加文字内容
 func (p *superPost) Content(content string) *superPost {
 	p.ContentStr += content
 	return p
 }
 
+// Pic 添加图片
 func (p *superPost) Pic(img []byte) *superPost {
 	p.Pics = append(p.Pics, img)
 	return p
 }
 
+// Right 设置说说权限
 func (p *superPost) Right(right string) *superPost {
 	p.RightStr = right
 	return p

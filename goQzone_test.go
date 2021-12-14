@@ -1,13 +1,14 @@
-package main
+package goQzone
 
 import (
-	"GoQzone-Demo/pkg/goQzone"
 	"fmt"
 	"io/ioutil"
+	"testing"
 )
 
-func main() {
-	client := goQzone.Init()
+// 发送说说（文字+图片）
+func TestSendEmotion(t *testing.T) {
+	client := Init()
 	if err := client.QrLogin(); err != nil {
 		panic(err)
 	}

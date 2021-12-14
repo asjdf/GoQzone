@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"image"
-	"image/color"
+	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
+	"image/jpeg"
 	"math/rand"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tuotoo/qrcode"
+	"image"
+	"image/color"
 )
 
 func convert2Ascii(img image.Image) string {
@@ -97,6 +102,7 @@ func (s *Service) getQrCode() (img image.Image, err error) {
 	return imgDecode, nil
 }
 
+// QrLogin 扫码登录
 func (s *Service) QrLogin() error {
 	err := s.getXlogin()
 	if err != nil {
@@ -108,7 +114,28 @@ func (s *Service) QrLogin() error {
 		panic(err)
 	}
 
-	fmt.Println(convert2Ascii(qrImg))
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, qrImg, nil)
+	if err != nil {
+		return err
+	}
+	fi, err := qrcode.Decode(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		return err
+	}
+	if f, err := os.Create("qrcode.jpeg"); err == nil {
+		defer func() { _ = os.Remove("qrcode.jpeg") }()
+		if err := jpeg.Encode(f, qrImg, nil); err != nil {
+			return err
+		}
+		fmt.Println("您可以使用QQ扫描控制台中的二维码或是扫描程序运行目录中的qrcode.jpeg")
+	}
+	qrcodeTerminal.New2(
+		qrcodeTerminal.ConsoleColors.BrightBlack,
+		qrcodeTerminal.ConsoleColors.BrightWhite,
+		qrcodeTerminal.QRCodeRecoveryLevels.Low).
+		Get(fi.Content).Print()
+	//fmt.Println(convert2Ascii(qrImg))
 
 	loginUrl := ""
 	for {
@@ -294,6 +321,7 @@ func (s *Service) CheckCookieValid() bool {
 	return false
 }
 
+// 定期访问保证Cookie有效性
 func (s *Service) keepCookieAlive() {
 	for {
 		s.Request.Get("https://user.qzone.qq.com/" + s.getUin()).End()
