@@ -10,13 +10,15 @@ import (
 	"strings"
 )
 
-// 说说可见权限
+// VisibleRight 说说可见权限
+type VisibleRight int
+
 const (
-	VisibleAll        = 1   // 所有人可见
-	VisibleFriend     = 4   // 好友可见
-	VisiblePartFriend = 16  // 部分好友可见
-	VisibleSelf       = 64  // 仅自己可见
-	VisibleBanPart    = 128 // 仅部分好友不可见
+	VisibleAll    VisibleRight = 1  // 所有人可见
+	VisibleFriend VisibleRight = 4  // 好友可见
+	VisibleSelf   VisibleRight = 64 // 仅自己可见
+	//VisiblePartFriend VisibleRight = 16  // 部分好友可见 暂不资瓷
+	//VisibleBanPart    VisibleRight = 128 // 仅部分好友不可见 暂不资瓷
 )
 
 type superEmotion struct {
@@ -26,23 +28,23 @@ type superEmotion struct {
 }
 
 type Emotion struct {
-	SynTweetVersion string `json:"syn_tweet_verson"`
-	ParamStr        string `json:"paramstr"`
-	PicTemplate     string `json:"pic_template"`
-	RichType        string `json:"richtype"`
-	RichVal         string `json:"richval"`
-	SpecialUrl      string `json:"special_url"`
-	SubRichType     string `json:"subrichtype"`
-	Con             string `json:"con"` // 文字内容
-	FeedVersion     string `json:"feedversion"`
-	Ver             string `json:"ver"`
-	UgcRight        int    `json:"ugc_right"` // 可见权限
-	ToSign          string `json:"to_sign"`
-	HostUin         string `json:"hostuin"`
-	CodeVersion     string `json:"code_version"`
-	Format          string `json:"format"`
-	QzReferrer      string `json:"qzreferrer"`
-	PicBo           string `json:"pic_bo,omitempty"`
+	SynTweetVersion string       `json:"syn_tweet_verson"`
+	ParamStr        string       `json:"paramstr"`
+	PicTemplate     string       `json:"pic_template"`
+	RichType        string       `json:"richtype"`
+	RichVal         string       `json:"richval"`
+	SpecialUrl      string       `json:"special_url"`
+	SubRichType     string       `json:"subrichtype"`
+	Con             string       `json:"con"` // 文字内容
+	FeedVersion     string       `json:"feedversion"`
+	Ver             string       `json:"ver"`
+	UgcRight        VisibleRight `json:"ugc_right"` // 可见权限
+	ToSign          string       `json:"to_sign"`
+	HostUin         string       `json:"hostuin"`
+	CodeVersion     string       `json:"code_version"`
+	Format          string       `json:"format"`
+	QzReferrer      string       `json:"qzreferrer"`
+	PicBo           string       `json:"pic_bo,omitempty"`
 }
 
 func (s *Service) getGtk() string {
@@ -111,7 +113,7 @@ func (p *superEmotion) Pic(img []byte) *superEmotion {
 }
 
 // Right 设置说说权限
-func (p *superEmotion) Right(right int) *superEmotion {
+func (p *superEmotion) Right(right VisibleRight) *superEmotion {
 	p.Emotion.UgcRight = right
 	return p
 }
@@ -159,7 +161,6 @@ func (p *superEmotion) Send() error {
 			End()
 
 	}
-
 	return nil
 }
 
@@ -218,7 +219,7 @@ func (s *Service) uploadPic(pic []byte) (*picUploadRespJsonT, error) {
 		return nil, errors.New("uploadPic() 网络出错")
 	}
 	respJson := new(picUploadRespJsonT)
-	err := json.Unmarshal([]byte(regexp.MustCompile("frameElement.callback\\((.*)\\);</script></body></html>").FindStringSubmatch(body)[1]), &respJson)
+	err := json.Unmarshal([]byte(regexp.MustCompile(`frameElement.callback\((.*)\);</script></body></html>`).FindStringSubmatch(body)[1]), &respJson)
 	if err != nil {
 		return nil, err
 	}
